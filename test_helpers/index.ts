@@ -10,7 +10,6 @@
 import type { ApplicationService } from '@adonisjs/core/types'
 import type { Database } from '@adonisjs/lucid/database'
 
-import { join } from 'node:path'
 import { IgnitorFactory } from '@adonisjs/core/factories'
 import { HttpContextFactory, RequestFactory } from '@adonisjs/core/factories/http'
 import { defineConfig } from '@adonisjs/lucid'
@@ -38,7 +37,7 @@ export async function setupApp() {
             sqlite: {
               client: 'better-sqlite3',
               connection: {
-                filename: join(BASE_URL.href, '/db.sqlite3'),
+                filename: new URL('./db.sqlite3', BASE_URL).href,
               },
             },
           },
