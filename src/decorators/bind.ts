@@ -7,7 +7,8 @@
  * file that was distributed with this source code.
  */
 
-import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
+import type { HttpContext } from '@adonisjs/core/http'
+import { resolveRouteHandler } from '../utils.js'
 
 /**
  * Automatically query Lucid models for the current HTTP
@@ -28,13 +29,15 @@ export function bind() {
       })
 
       Object.defineProperty(target, 'getHandlerArguments', {
-        value: function (ctx: HttpContextContract) {
-          const handler = ctx.route!.meta.resolvedHandler
-          if (!handler || handler.type === 'function') {
+        value: async function (ctx: HttpContext) {
+          const handler = ctx.route!.handler
+          if (!handler || typeof handler === 'function') {
             return [ctx]
           }
 
-          const bindings = this.constructor.bindings[handler.method]
+          const resolvedHandler = await resolveRouteHandler(handler.reference)
+
+          const bindings = this.constructor.bindings[resolvedHandler.method]
           if (!bindings) {
             return [ctx]
           }

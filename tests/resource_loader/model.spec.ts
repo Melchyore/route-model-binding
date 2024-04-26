@@ -7,33 +7,26 @@
  * file that was distributed with this source code.
  */
 
-import { join } from 'path'
 import { test } from '@japa/runner'
-import type { HasMany } from '@ioc:Adonis/Lucid/Orm'
-import { ResourceLoader } from '../../src/resource_loader'
-import { setup, fs, getContextForRoute, migrate, rollback } from '../../test_helpers'
+import type { HasMany } from '@adonisjs/lucid/types/relations'
+import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
+import { ResourceLoader } from '../../src/resource_loader.js'
+import { setupApp, getContextForRoute, migrate, rollback } from '../../test_helpers/index.js'
 
-test.group('Resource Loader', (group) => {
-  group.each.setup(async () => {
-    await fs.fsExtra.ensureDir(join(fs.basePath, 'database'))
-    return () => fs.cleanup()
-  })
-
+test.group('Resource Loader', () => {
   test('load model by primary key', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     await Post.createMany([
@@ -47,11 +40,11 @@ test.group('Resource Loader', (group) => {
       },
     ])
 
-    const ctx = getContextForRoute(app, 'posts/:post', 'posts/1')
-    const loader = new ResourceLoader(ctx)
+    const ctx = await getContextForRoute(app, '/posts/:post', 'posts/1', 'GET', async () => {})
+    const loader = new ResourceLoader(ctx, await app.container.make('router'))
     await loader.load([Post])
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
 
     assert.property(loader.resources, 'post')
     assert.instanceOf(loader.resources.post, Post)
@@ -60,22 +53,20 @@ test.group('Resource Loader', (group) => {
   })
 
   test('load model by custom model key', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
-      public static routeLookupKey = 'slug'
+      static routeLookupKey = 'slug'
 
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     await Post.createMany([
@@ -89,11 +80,17 @@ test.group('Resource Loader', (group) => {
       },
     ])
 
-    const ctx = getContextForRoute(app, 'posts/:post', 'posts/hello-adonisjs')
-    const loader = new ResourceLoader(ctx)
+    const ctx = await getContextForRoute(
+      app,
+      '/posts/:post',
+      'posts/hello-adonisjs',
+      'GET',
+      async () => {}
+    )
+    const loader = new ResourceLoader(ctx, await app.container.make('router'))
     await loader.load([Post])
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
 
     assert.property(loader.resources, 'post')
     assert.instanceOf(loader.resources.post, Post)
@@ -102,20 +99,18 @@ test.group('Resource Loader', (group) => {
   })
 
   test('load model by custom route key', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     await Post.createMany([
@@ -129,11 +124,17 @@ test.group('Resource Loader', (group) => {
       },
     ])
 
-    const ctx = getContextForRoute(app, 'posts/:post(slug)', 'posts/hello-adonisjs')
-    const loader = new ResourceLoader(ctx)
+    const ctx = await getContextForRoute(
+      app,
+      '/posts/:post(slug)',
+      'posts/hello-adonisjs',
+      'GET',
+      async () => {}
+    )
+    const loader = new ResourceLoader(ctx, await app.container.make('router'))
     await loader.load([Post])
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
 
     assert.deepEqual(ctx.params, { post: 'hello-adonisjs' })
     assert.deepEqual(ctx.request.params(), { post: 'hello-adonisjs' })
@@ -146,22 +147,20 @@ test.group('Resource Loader', (group) => {
   })
 
   test('load model by static "findForRequest" method', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
 
-      public static findForRequest(_, __, value: string) {
+      static findForRequest(_: any, __: any, value: string) {
         return this.query().where('slug', value).firstOrFail()
       }
     }
@@ -177,11 +176,17 @@ test.group('Resource Loader', (group) => {
       },
     ])
 
-    const ctx = getContextForRoute(app, 'posts/:post', 'posts/hello-adonisjs')
-    const loader = new ResourceLoader(ctx)
+    const ctx = await getContextForRoute(
+      app,
+      '/posts/:post',
+      'posts/hello-adonisjs',
+      'GET',
+      async () => {}
+    )
+    const loader = new ResourceLoader(ctx, await app.container.make('router'))
     await loader.load([Post])
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
 
     assert.property(loader.resources, 'post')
     assert.instanceOf(loader.resources.post, Post)
@@ -190,37 +195,35 @@ test.group('Resource Loader', (group) => {
   })
 
   test('load nested independent resource', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column, hasMany } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
 
       @hasMany(() => Comment)
-      public comments: HasMany<typeof Comment>
+      declare comments: HasMany<typeof Comment>
     }
 
     class Comment extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public postId: number
+      declare postId: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     const [post1, post2] = await Post.createMany([
@@ -237,11 +240,17 @@ test.group('Resource Loader', (group) => {
     await post1.related('comments').create({ title: 'Nice post', slug: 'nice-post' })
     await post2.related('comments').create({ title: 'Awesome post', slug: 'awesome-post' })
 
-    const ctx = getContextForRoute(app, 'posts/:post/comments/:comment', 'posts/1/comments/1')
-    const loader = new ResourceLoader(ctx)
+    const ctx = await getContextForRoute(
+      app,
+      '/posts/:post/comments/:comment',
+      'posts/1/comments/1',
+      'GET',
+      async () => {}
+    )
+    const loader = new ResourceLoader(ctx, await app.container.make('router'))
     await loader.load([Post, Comment])
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
 
     assert.property(loader.resources, 'post')
     assert.instanceOf(loader.resources.post, Post)
@@ -255,37 +264,35 @@ test.group('Resource Loader', (group) => {
   })
 
   test('do not load resource for optional missing param', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column, hasMany } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
 
       @hasMany(() => Comment)
-      public comments: HasMany<typeof Comment>
+      declare comments: HasMany<typeof Comment>
     }
 
     class Comment extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public postId: number
+      declare postId: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     const [post1, post2] = await Post.createMany([
@@ -302,11 +309,17 @@ test.group('Resource Loader', (group) => {
     await post1.related('comments').create({ title: 'Nice post', slug: 'nice-post' })
     await post2.related('comments').create({ title: 'Awesome post', slug: 'awesome-post' })
 
-    const ctx = getContextForRoute(app, 'posts/:post/comments/:comment?', 'posts/1/comments')
-    const loader = new ResourceLoader(ctx)
+    const ctx = await getContextForRoute(
+      app,
+      '/posts/:post/comments/:comment?',
+      'posts/1/comments',
+      'GET',
+      async () => {}
+    )
+    const loader = new ResourceLoader(ctx, await app.container.make('router'))
     await loader.load([Post, Comment])
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
 
     assert.property(loader.resources, 'post')
     assert.instanceOf(loader.resources.post, Post)
@@ -317,37 +330,35 @@ test.group('Resource Loader', (group) => {
   })
 
   test('disable model binding by setting param type to null', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column, hasMany } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
 
       @hasMany(() => Comment)
-      public comments: HasMany<typeof Comment>
+      declare comments: HasMany<typeof Comment>
     }
 
     class Comment extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public postId: number
+      declare postId: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     const [post1, post2] = await Post.createMany([
@@ -364,11 +375,17 @@ test.group('Resource Loader', (group) => {
     await post1.related('comments').create({ title: 'Nice post', slug: 'nice-post' })
     await post2.related('comments').create({ title: 'Awesome post', slug: 'awesome-post' })
 
-    const ctx = getContextForRoute(app, 'posts/:post/comments/:comment?', 'posts/1/comments/1')
-    const loader = new ResourceLoader(ctx)
+    const ctx = await getContextForRoute(
+      app,
+      '/posts/:post/comments/:comment?',
+      'posts/1/comments/1',
+      'GET',
+      async () => {}
+    )
+    const loader = new ResourceLoader(ctx, await app.container.make('router'))
     await loader.load([null, Comment])
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
 
     assert.property(loader.resources, 'post')
     assert.equal(loader.resources.post, '1')

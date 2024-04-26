@@ -7,13 +7,14 @@
  * file that was distributed with this source code.
  */
 
-import { string } from '@poppinss/utils/build/helpers'
-import { LucidModel, LucidRow } from '@ioc:Adonis/Lucid/Orm'
-import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
+import type { LucidModel } from '@adonisjs/lucid/types/model'
+import type { HttpContext } from '@adonisjs/core/http'
 
-import { ParamsParser } from '../params_parser'
-import { Param, RouteModel } from '../contracts'
-import { MissingRelationshipException } from '../exceptions/missing_relationship'
+import { ParamsParser } from './params_parser.js'
+import { Param, RouteModel, RouteRow } from './types/main.js'
+import { MissingRelationshipException } from './exceptions/missing_relationship.js'
+import string from '@poppinss/utils/string'
+import { HttpRouterService } from '@adonisjs/core/types'
 
 /**
  * Resource loader job is to query the Lucid models for the given
@@ -50,13 +51,21 @@ import { MissingRelationshipException } from '../exceptions/missing_relationship
  * - Post.findRelatedForRequest() - Define a custom method to lookup Comment for a given post
  */
 export class ResourceLoader {
-  public resources: Record<string, any> = {}
-  constructor(public ctx: HttpContextContract) {}
+  #router: HttpRouterService
+
+  resources: Record<string, any> = {}
+
+  constructor(
+    public ctx: HttpContext,
+    router: HttpRouterService
+  ) {
+    this.#router = router
+  }
 
   /**
    * Returns true when value is a resource model
    */
-  private isResourceModel(value: any): value is RouteModel {
+  #isResourceModel(value: any): value is RouteModel {
     if (!value) {
       return false
     }
@@ -71,11 +80,11 @@ export class ResourceLoader {
   /**
    * Returns the relationship name for a scoped resource
    */
-  private getRelationshipName(param: Param, parentModel: LucidModel): string {
+  #getRelationshipName(param: Param, parentModel: LucidModel): string {
     /**
      * Search relationship by singular name
      */
-    let relationshipName = string.singularize(string.camelCase(param.name))
+    let relationshipName = string.singular(string.camelCase(param.name))
     if (parentModel.$hasRelation(relationshipName)) {
       return relationshipName
     }
@@ -95,8 +104,8 @@ export class ResourceLoader {
    * Instantiate scoped model. The parent model instance is passed as
    * the first argument.
    */
-  private async instantiateScopedModel(model: RouteModel, param: Param, value: any) {
-    const parentModel = this.resources[param.parent!] as LucidRow
+  async #instantiateScopedModel(model: RouteModel, param: Param, value: any) {
+    const parentModel = this.resources[param.parent!] as RouteRow
     const parentModelConstructor = parentModel.constructor as RouteModel
 
     /**
@@ -107,7 +116,7 @@ export class ResourceLoader {
     }
 
     const relatedQuery = parentModel
-      .related(this.getRelationshipName(param, parentModelConstructor) as any)
+      .related(this.#getRelationshipName(param, parentModelConstructor) as any)
       .query()
 
     /**
@@ -133,7 +142,7 @@ export class ResourceLoader {
   /**
    * Instantiate model
    */
-  private async instantiateModel(model: RouteModel, param: Param, value: any) {
+  async #instantiateModel(model: RouteModel, param: Param, value: any) {
     /**
      * The first priority is given to the model static "findForRequest" method
      */
@@ -164,7 +173,7 @@ export class ResourceLoader {
   /**
    * Rewrite ctx.params to use normalized param names
    */
-  private rewriteParams(params: Param[]) {
+  #rewriteParams(params: Param[]) {
     params.forEach((param) => {
       if (param.name !== param.param) {
         this.ctx.params[param.name] = this.ctx.params[param.param]
@@ -176,11 +185,11 @@ export class ResourceLoader {
   /**
    * Load models based upon the current request route params
    */
-  public async load(models: any[]) {
+  async load(models: any[]) {
     let index = 0
     if (!this.ctx.route!.meta.resolvedParams) {
       this.ctx.route!.meta.resolvedParams = new ParamsParser(
-        this.ctx.route!.params,
+        this.#router.match(this.ctx.request.url(), this.ctx.request.method())!.route.meta.params,
         this.ctx.route!.pattern
       ).parse()
     }
@@ -204,10 +213,10 @@ export class ResourceLoader {
        *     - Param can be null when custom "cast" function sets it to null
        */
       if (value !== undefined && value !== null) {
-        if (this.isResourceModel(model)) {
+        if (this.#isResourceModel(model)) {
           this.resources[param.name] = param.scoped
-            ? await this.instantiateScopedModel(model, param, value)
-            : await this.instantiateModel(model, param, value)
+            ? await this.#instantiateScopedModel(model, param, value)
+            : await this.#instantiateModel(model, param, value)
         } else {
           this.resources[param.name] = value
         }
@@ -216,6 +225,6 @@ export class ResourceLoader {
       index++
     }
 
-    this.rewriteParams(routeParams)
+    this.#rewriteParams(routeParams)
   }
 }

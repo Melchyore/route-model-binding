@@ -7,57 +7,53 @@
  * file that was distributed with this source code.
  */
 
-import { join } from 'path'
+import type { HasMany } from '@adonisjs/lucid/types/relations'
+
 import { test } from '@japa/runner'
-import type { HasMany } from '@ioc:Adonis/Lucid/Orm'
+import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
 
-import { setup, fs, getContextForRoute, migrate, rollback } from '../test_helpers'
-import { RouteModelBindingMiddleware } from '../src/middleware/route_model_binding'
-import { bind } from '../src/decorators/bind'
+import { setupApp, getContextForRoute, migrate, rollback } from '../test_helpers/index.js'
+import { RouteModelBindingMiddleware } from '../src/rmb_middleware.js'
+import { bind } from '../src/decorators/bind.js'
+import { HttpContext } from '@adonisjs/core/http'
+import { Controller } from '../src/types/main.js'
 
-test.group('Route model binding | middleware', (group) => {
-  group.each.setup(async () => {
-    await fs.fsExtra.ensureDir(join(fs.basePath, 'database'))
-    return () => fs.cleanup()
-  })
-
+test.group('Route model binding | middleware', () => {
   test('load resources for a given request', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column, hasMany } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
 
       @hasMany(() => Comment)
-      public comments: HasMany<typeof Comment>
+      declare comments: HasMany<typeof Comment>
     }
 
     class Comment extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public postId: number
+      declare postId: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     class PostsController {
       @bind()
-      public show(_, __: Post) {}
+      show(_: HttpContext, __: Post) {}
     }
 
     await Post.createMany([
@@ -71,14 +67,11 @@ test.group('Route model binding | middleware', (group) => {
       },
     ])
 
-    const ctx = getContextForRoute(app, 'posts/:post', 'posts/2')
-    ctx.route!.meta.resolvedHandler = {
-      type: 'binding',
-      namespace: 'PostsController',
-      method: 'show',
-    }
+    const ctx = await getContextForRoute(app, '/posts/:post', 'posts/2', 'GET', [
+      PostsController,
+      'show',
+    ])
 
-    app.container.bind('PostsController', () => PostsController)
     await new RouteModelBindingMiddleware(app).handle(ctx, async () => {
       assert.property(ctx.resources, 'post')
       assert.instanceOf(ctx.resources.post, Post)
@@ -86,46 +79,44 @@ test.group('Route model binding | middleware', (group) => {
       assert.equal(ctx.resources.post.slug, 'hello-adonisjs')
     })
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
   })
 
   test('load resources with a custom route param', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column, hasMany } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
 
       @hasMany(() => Comment)
-      public comments: HasMany<typeof Comment>
+      declare comments: HasMany<typeof Comment>
     }
 
     class Comment extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public postId: number
+      declare postId: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     class PostsController {
       @bind()
-      public show(_, __: Post) {}
+      show(_: HttpContext, __: Post) {}
     }
 
     await Post.createMany([
@@ -139,14 +130,11 @@ test.group('Route model binding | middleware', (group) => {
       },
     ])
 
-    const ctx = getContextForRoute(app, 'posts/:post(slug)', 'posts/hello-adonisjs')
-    ctx.route!.meta.resolvedHandler = {
-      type: 'binding',
-      namespace: 'PostsController',
-      method: 'show',
-    }
+    const ctx = await getContextForRoute(app, '/posts/:post(slug)', 'posts/hello-adonisjs', 'GET', [
+      PostsController,
+      'show',
+    ])
 
-    app.container.bind('PostsController', () => PostsController)
     await new RouteModelBindingMiddleware(app).handle(ctx, async () => {
       assert.property(ctx.resources, 'post')
       assert.instanceOf(ctx.resources.post, Post)
@@ -154,47 +142,45 @@ test.group('Route model binding | middleware', (group) => {
       assert.equal(ctx.resources.post.slug, 'hello-adonisjs')
     })
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
   })
 
   test("do not load resources when controller isn't using the bind decorator", async ({
     assert,
   }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column, hasMany } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
 
       @hasMany(() => Comment)
-      public comments: HasMany<typeof Comment>
+      declare comments: HasMany<typeof Comment>
     }
 
     class Comment extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public postId: number
+      declare postId: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     class PostsController {
-      public show(_, __: Post) {}
+      show(_: HttpContext, __: Post) {}
     }
 
     await Post.createMany([
@@ -208,57 +194,51 @@ test.group('Route model binding | middleware', (group) => {
       },
     ])
 
-    const ctx = getContextForRoute(app, 'posts/:post', 'posts/2')
-    ctx.route!.meta.resolvedHandler = {
-      type: 'binding',
-      namespace: 'PostsController',
-      method: 'show',
-    }
-
-    app.container.bind('PostsController', () => PostsController)
+    const ctx = await getContextForRoute(app, '/posts/:post', 'posts/2', 'GET', [
+      PostsController,
+      'show',
+    ])
     await new RouteModelBindingMiddleware(app).handle(ctx, async () => {
       assert.deepEqual(ctx.resources, {})
     })
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
   })
 
   test('do not load resources when route handler is a closure', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column, hasMany } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
 
       @hasMany(() => Comment)
-      public comments: HasMany<typeof Comment>
+      declare comments: HasMany<typeof Comment>
     }
 
     class Comment extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public postId: number
+      declare postId: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     class PostsController {
-      public show(_, __: Post) {}
+      show(_: HttpContext, __: Post) {}
     }
 
     await Post.createMany([
@@ -272,52 +252,53 @@ test.group('Route model binding | middleware', (group) => {
       },
     ])
 
-    const ctx = getContextForRoute(app, 'posts/:post', 'posts/2')
-    app.container.bind('PostsController', () => PostsController)
+    const ctx = await getContextForRoute(app, '/posts/:post', 'posts/2', 'GET', [
+      PostsController,
+      async () => {},
+    ])
+
     await new RouteModelBindingMiddleware(app).handle(ctx, async () => {
       assert.deepEqual(ctx.resources, {})
     })
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
   })
 
   test('disable model binding by setting argument type to null', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column, hasMany } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
 
       @hasMany(() => Comment)
-      public comments: HasMany<typeof Comment>
+      declare comments: HasMany<typeof Comment>
     }
 
     class Comment extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public postId: number
+      declare postId: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     class PostsController {
       @bind()
-      public show(_, __: null, ___: Post) {}
+      show(_: HttpContext, __: null, ___: Post) {}
     }
 
     await Post.createMany([
@@ -331,65 +312,60 @@ test.group('Route model binding | middleware', (group) => {
       },
     ])
 
-    const ctx = getContextForRoute(app, ':sessionId/posts/:post', '1/posts/2')
-    ctx.route!.meta.resolvedHandler = {
-      type: 'binding',
-      namespace: 'PostsController',
-      method: 'show',
-    }
-
-    app.container.bind('PostsController', () => PostsController)
+    const ctx = await getContextForRoute(app, '/:sessionId/posts/:post', '1/posts/2', 'GET', [
+      PostsController,
+      'show',
+    ])
 
     await new RouteModelBindingMiddleware(app).handle(ctx, async () => {
       assert.property(ctx.resources, 'post')
       assert.instanceOf(ctx.resources.post, Post)
       assert.equal(ctx.resources.post.id, 2)
       assert.equal(ctx.resources.post.slug, 'hello-adonisjs')
-      const postController = app.container.make(app.container.use('PostsController'))
-      const injections = postController.getHandlerArguments(ctx)
+
+      const postsController = new PostsController() as InstanceType<Controller>
+      const injections = await postsController.getHandlerArguments(ctx)
       assert.deepEqual(injections, [ctx, '1', ctx.resources.post])
     })
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
   })
 
   test('disable model binding by setting argument type to a primitive type', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column, hasMany } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
 
       @hasMany(() => Comment)
-      public comments: HasMany<typeof Comment>
+      declare comments: HasMany<typeof Comment>
     }
 
     class Comment extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public postId: number
+      declare postId: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     class PostsController {
       @bind()
-      public show(_, __: string, ___: Post) {}
+      show(_: HttpContext, __: string, ___: Post) {}
     }
 
     await Post.createMany([
@@ -403,65 +379,60 @@ test.group('Route model binding | middleware', (group) => {
       },
     ])
 
-    const ctx = getContextForRoute(app, ':sessionId/posts/:post', '1/posts/2')
-    ctx.route!.meta.resolvedHandler = {
-      type: 'binding',
-      namespace: 'PostsController',
-      method: 'show',
-    }
-
-    app.container.bind('PostsController', () => PostsController)
+    const ctx = await getContextForRoute(app, '/:sessionId/posts/:post', '1/posts/2', 'GET', [
+      PostsController,
+      'show',
+    ])
 
     await new RouteModelBindingMiddleware(app).handle(ctx, async () => {
       assert.property(ctx.resources, 'post')
       assert.instanceOf(ctx.resources.post, Post)
       assert.equal(ctx.resources.post.id, 2)
       assert.equal(ctx.resources.post.slug, 'hello-adonisjs')
-      const postController = app.container.make(app.container.use('PostsController'))
-      const injections = postController.getHandlerArguments(ctx)
+
+      const postsController = new PostsController() as InstanceType<Controller>
+      const injections = await postsController.getHandlerArguments(ctx)
       assert.deepEqual(injections, [ctx, '1', ctx.resources.post])
     })
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
   })
 
   test('ignore bindings which have no parameters in route', async ({ assert }) => {
-    const app = await setup()
-    await migrate(app.container.resolveBinding('Adonis/Lucid/Database'))
-
-    const { BaseModel, column, hasMany } = app.container.resolveBinding('Adonis/Lucid/Orm')
+    const app = await setupApp()
+    await migrate(await app.container.make('lucid.db'))
 
     class Post extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
 
       @hasMany(() => Comment)
-      public comments: HasMany<typeof Comment>
+      declare comments: HasMany<typeof Comment>
     }
 
     class Comment extends BaseModel {
       @column({ isPrimary: true })
-      public id: number
+      declare id: number
 
       @column()
-      public postId: number
+      declare postId: number
 
       @column()
-      public title: string
+      declare title: string
 
       @column()
-      public slug: string
+      declare slug: string
     }
 
     class PostsController {
       @bind()
-      public show(_, __: Post, ___: Comment) {}
+      show(_: HttpContext, __: Post, ___: Comment) {}
     }
 
     await Post.createMany([
@@ -475,25 +446,22 @@ test.group('Route model binding | middleware', (group) => {
       },
     ])
 
-    const ctx = getContextForRoute(app, 'posts/:post', 'posts/2')
-    ctx.route!.meta.resolvedHandler = {
-      type: 'binding',
-      namespace: 'PostsController',
-      method: 'show',
-    }
+    const ctx = await getContextForRoute(app, '/posts/:post', 'posts/2', 'GET', [
+      PostsController,
+      'show',
+    ])
 
-    app.container.bind('PostsController', () => PostsController)
     await new RouteModelBindingMiddleware(app).handle(ctx, async () => {
       assert.property(ctx.resources, 'post')
       assert.instanceOf(ctx.resources.post, Post)
       assert.equal(ctx.resources.post.id, 2)
       assert.equal(ctx.resources.post.slug, 'hello-adonisjs')
 
-      const postController = app.container.make(app.container.use('PostsController'))
-      const injections = postController.getHandlerArguments(ctx)
+      const postsController = new PostsController() as InstanceType<Controller>
+      const injections = await postsController.getHandlerArguments(ctx)
       assert.deepEqual(injections, [ctx, ctx.resources.post])
     })
 
-    await rollback(app.container.resolveBinding('Adonis/Lucid/Database'))
+    await rollback(await app.container.make('lucid.db'))
   })
 })

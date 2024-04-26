@@ -14,9 +14,12 @@ import { Exception } from '@poppinss/utils'
  * to a class constructor or method
  */
 export class MissingRelationshipException extends Exception {
-  public static invoke(paramName: string, route: string, parentModel: string) {
+  static invoke(paramName: string, route: string, parentModel: string) {
     const errorMessage = `Cannot load "${paramName}" for route "${route}". Make sure to define it as a relationship on model "${parentModel}"`
 
-    return new this(errorMessage, 500, 'E_MISSING_RELATIONSHIP')
+    return new this(errorMessage, {
+      code: 'E_MISSING_RELATIONSHIP',
+      status: 500,
+    })
   }
 }

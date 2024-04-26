@@ -7,4 +7,5 @@
  * file that was distributed with this source code.
  */
 
-export { bind } from './src/decorators/bind'
+export { configure } from './configure.js'
+export { bind } from './src/decorators/bind.js'

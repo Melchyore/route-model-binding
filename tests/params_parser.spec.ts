@@ -8,7 +8,7 @@
  */
 
 import { test } from '@japa/runner'
-import { ParamsParser } from '../src/params_parser'
+import { ParamsParser } from '../src/params_parser.js'
 
 test.group('Params Parser', () => {
   test('parse route params', async ({ assert }) => {

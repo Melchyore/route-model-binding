@@ -8,11 +8,13 @@
  */
 
 import 'reflect-metadata'
-import { bind } from '../src/decorators/bind'
+import type { HttpContext } from '@adonisjs/core/http'
+
+import { bind } from '../src/decorators/bind.js'
 
 class User {}
 
 export class UsersController {
   @bind()
-  public show(_, __: User) {}
+  show(_: HttpContext, __: User) {}
 }

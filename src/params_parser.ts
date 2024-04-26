@@ -7,7 +7,7 @@
  * file that was distributed with this source code.
  */
 
-import { Param } from '../contracts'
+import { Param } from './types/main.js'
 
 /**
  * Parses the params on a route. The params parser should not rely on the
@@ -17,7 +17,14 @@ import { Param } from '../contracts'
  * In other words, the params parser should be idempotent across request.
  */
 export class ParamsParser {
-  constructor(private params: string[], private routePattern: string) {}
+  #params: string[]
+
+  #routePattern: string
+
+  constructor(params: string[], routePattern: string) {
+    this.#params = params
+    this.#routePattern = routePattern
+  }
 
   /**
    * A param can be one of the following
@@ -27,7 +34,7 @@ export class ParamsParser {
    * >comment
    * >comment(slug)
    */
-  private parseParam(param: string): Param {
+  #parseParam(param: string): Param {
     let scoped = false
     let [name, lookupKey] = param.split('(')
 
@@ -54,11 +61,11 @@ export class ParamsParser {
   /**
    * Loop through the params and setup the parents
    */
-  private computeParamParents(params: Param[]) {
+  #computeParamParents(params: Param[]) {
     params.forEach((param, index) => {
       if (param.scoped) {
         if (index === 0) {
-          throw new Error(`The first parameter in route "${this.routePattern}" cannot be scoped`)
+          throw new Error(`The first parameter in route "${this.#routePattern}" cannot be scoped`)
         }
 
         param.parent = params[index - 1].name
@@ -71,7 +78,7 @@ export class ParamsParser {
   /**
    * Parse route params for a given request
    */
-  public parse() {
-    return this.computeParamParents(this.params.map((param) => this.parseParam(param)))
+  parse() {
+    return this.#computeParamParents(this.#params.map((param) => this.#parseParam(param)))
   }
 }

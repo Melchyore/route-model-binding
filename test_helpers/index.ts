@@ -7,61 +7,66 @@
  * file that was distributed with this source code.
  */
 
-import { join } from 'path'
-import { Filesystem } from '@poppinss/dev-utils'
-import { DatabaseContract } from '@ioc:Adonis/Lucid/Database'
-import { Application } from '@adonisjs/core/build/standalone'
+import type { ApplicationService } from '@adonisjs/core/types'
+import type { Database } from '@adonisjs/lucid/database'
 
-export const fs = new Filesystem(join(__dirname, '__app'))
+import { IgnitorFactory } from '@adonisjs/core/factories'
+import { HttpContextFactory, RequestFactory } from '@adonisjs/core/factories/http'
+import { defineConfig } from '@adonisjs/lucid'
+import { fileURLToPath } from 'node:url'
+
+export const BASE_URL = new URL('./tmp/', import.meta.url)
+export const BASE_PATH = fileURLToPath(BASE_URL)
 
 /**
  * Setup AdonisJS application
  */
-export async function setup() {
-  const application = new Application(fs.basePath, 'web', {
-    providers: ['@adonisjs/core', '@adonisjs/lucid'],
-  })
-
-  await fs.add(
-    'config/app.ts',
-    `
-    export const profiler = { enabled: true }
-    export const appKey = 'averylongrandomsecretkey'
-    export const http = {
-      trustProxy: () => {},
-      cookie: {}
-    }
-  `
-  )
-
-  await fs.add(
-    'config/database.ts',
-    `
-    import { join } from 'path'
-
-    export const connection = 'sqlite'
-    export const connections = {
-      sqlite: {
-        client: 'sqlite3',
-        connection: {
-          filename: join(__dirname, '..', 'database', 'db.sqlite')
+export async function setupApp() {
+  const ignitor = new IgnitorFactory()
+    .withCoreProviders()
+    .withCoreConfig()
+    .merge({
+      rcFileContents: {
+        providers: [
+          () => import('@adonisjs/lucid/database_provider'),
+          () => import('../providers/rmb_provider.js'),
+        ],
+      },
+      config: {
+        database: defineConfig({
+          connection: 'sqlite',
+          connections: {
+            sqlite: {
+              client: 'better-sqlite3',
+              connection: {
+                filename: new URL('./tmp/db.sqlite3', import.meta.url).href.replace('file:///', ''),
+              },
+            },
+          },
+        }),
+      },
+    })
+    .create(BASE_URL, {
+      importer: (filePath) => {
+        if (filePath.startsWith('./') || filePath.startsWith('../')) {
+          return import(new URL(filePath, BASE_URL).href)
         }
-      }
-    }
-  `
-  )
 
-  await application.setup()
-  await application.registerProviders()
-  await application.bootProviders()
+        return import(filePath)
+      },
+    })
 
-  return application
+  const app = ignitor.createApp('web')
+  await app.init()
+  await app.boot()
+
+  return app
 }
 
 /**
  * Migrate database
  */
-export async function migrate(database: DatabaseContract) {
+export async function migrate(database: Database) {
   await database.connection().schema.createTable('posts', (table) => {
     table.increments('id')
     table.string('title').notNullable()
@@ -79,24 +84,38 @@ export async function migrate(database: DatabaseContract) {
 /**
  * Rollback database
  */
-export async function rollback(database: DatabaseContract) {
-  await database.connection().schema.dropTable('posts')
+export async function rollback(database: Database) {
   await database.connection().schema.dropTable('comments')
+  await database.connection().schema.dropTable('posts')
   await database.manager.closeAll()
 }
 
 /**
  * Returns the context for a given route
  */
-export function getContextForRoute(app: Application, route: string, url: string) {
-  const HttpContext = app.container.resolveBinding('Adonis/Core/HttpContext')
-  const Route = app.container.resolveBinding('Adonis/Core/Route')
+export async function getContextForRoute(
+  app: ApplicationService,
+  route: string,
+  url: string,
+  method: string,
+  handler: any
+) {
+  const router = await app.container.make('router')
+  router.get(route, handler)
+  router.commit()
 
-  Route.get(route, () => {})
-  Route.commit()
+  const ctx = new HttpContextFactory()
+    .merge({
+      request: new RequestFactory()
+        .merge({
+          url,
+          method,
+        })
+        .create(),
+    })
+    .create()
+  ctx.route = router.findOrFail(route)
+  ctx.params = router.match(ctx.request.url(), ctx.request.method())?.params ?? {}
 
-  const matchingRoute = Route.match(url, 'GET')!
-
-  const ctx = HttpContext.create(matchingRoute.route.pattern, matchingRoute.params)
   return ctx
 }
