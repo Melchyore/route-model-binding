@@ -10,13 +10,12 @@
 import type { ApplicationService } from '@adonisjs/core/types'
 import type { Database } from '@adonisjs/lucid/database'
 
+import { join } from 'node:path'
 import { IgnitorFactory } from '@adonisjs/core/factories'
 import { HttpContextFactory, RequestFactory } from '@adonisjs/core/factories/http'
 import { defineConfig } from '@adonisjs/lucid'
-import { fileURLToPath } from 'node:url'
 
 export const BASE_URL = new URL('./tmp/', import.meta.url)
-export const BASE_PATH = fileURLToPath(BASE_URL)
 
 /**
  * Setup AdonisJS application
@@ -39,7 +38,7 @@ export async function setupApp() {
             sqlite: {
               client: 'better-sqlite3',
               connection: {
-                filename: new URL('./tmp/db.sqlite3', import.meta.url).href.replace('file:///', ''),
+                filename: join(BASE_URL.href, '/db.sqlite3'),
               },
             },
           },
