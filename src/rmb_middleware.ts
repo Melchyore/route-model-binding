@@ -9,6 +9,7 @@
 
 import type { ApplicationService } from '@adonisjs/core/types'
 import type { HttpContext } from '@adonisjs/core/http'
+import type { NextFn } from '@adonisjs/core/types/http'
 
 import { ResourceLoader } from './resource_loader.js'
 import { resolveRouteHandler } from './utils.js'
@@ -20,7 +21,7 @@ export default class RouteModelBindingMiddleware {
     this.#app = application
   }
 
-  async handle(ctx: HttpContext, next: () => Promise<any>) {
+  async handle(ctx: HttpContext, next: NextFn) {
     ctx.resources = {}
 
     /**
