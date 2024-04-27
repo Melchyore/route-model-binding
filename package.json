@@ -15,7 +15,7 @@
   ],
   "exports": {
     ".": "./build/index.js",
-    "./session_provider": "./build/providers/session_provider.js",
+    "./rmb_provider": "./build/providers/rmb_provider.js",
     "./rmb_middleware": "./build/src/rmb_middleware.js",
     "./types": "./build/src/types.js"
   },
