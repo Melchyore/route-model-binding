@@ -7,7 +7,7 @@
  * file that was distributed with this source code.
  */
 
-import { Param } from './types.js'
+import type { Param } from './types.js'
 
 /**
  * Parses the params on a route. The params parser should not rely on the
