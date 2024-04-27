@@ -17,7 +17,7 @@
     ".": "./build/index.js",
     "./rmb_provider": "./build/providers/rmb_provider.js",
     "./rmb_middleware": "./build/src/rmb_middleware.js",
-    "./types": "./build/src/types.js"
+    "./types/*": "./build/src/types/*.js"
   },
   "scripts": {
     "build": "npm run compile",
