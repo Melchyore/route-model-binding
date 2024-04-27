@@ -9,7 +9,7 @@
 
 import type { ApplicationService } from '@adonisjs/core/types'
 
-import { RouteModelBindingMiddleware } from '../src/rmb_middleware.js'
+import RouteModelBindingMiddleware from '../src/rmb_middleware.js'
 
 /**
  * AdonisJS provider for registering the middleware to the container

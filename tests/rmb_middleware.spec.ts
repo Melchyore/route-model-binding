@@ -8,14 +8,14 @@
  */
 
 import type { HasMany } from '@adonisjs/lucid/types/relations'
+import type { HttpContext } from '@adonisjs/core/http'
 
 import { test } from '@japa/runner'
 import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
 
 import { setupApp, getContextForRoute, migrate, rollback } from '../test_helpers/index.js'
-import { RouteModelBindingMiddleware } from '../src/rmb_middleware.js'
+import RouteModelBindingMiddleware from '../src/rmb_middleware.js'
 import { bind } from '../src/decorators/bind.js'
-import { HttpContext } from '@adonisjs/core/http'
 import { Controller } from '../src/types/main.js'
 
 test.group('Route model binding | middleware', () => {

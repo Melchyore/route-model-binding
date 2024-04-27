@@ -13,7 +13,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { ResourceLoader } from './resource_loader.js'
 import { resolveRouteHandler } from './utils.js'
 
-export class RouteModelBindingMiddleware {
+export default class RouteModelBindingMiddleware {
   #app: ApplicationService
 
   constructor(application: ApplicationService) {
