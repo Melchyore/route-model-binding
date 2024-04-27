@@ -9,12 +9,13 @@
 
 import type { LucidModel } from '@adonisjs/lucid/types/model'
 import type { HttpContext } from '@adonisjs/core/http'
+import type { Param, RouteModel, RouteRow } from './types.js'
 
-import { ParamsParser } from './params_parser.js'
-import { Param, RouteModel, RouteRow } from './types/main.js'
-import { MissingRelationshipException } from './exceptions/missing_relationship.js'
 import string from '@poppinss/utils/string'
 import { HttpRouterService } from '@adonisjs/core/types'
+
+import { ParamsParser } from './params_parser.js'
+import { MissingRelationshipException } from './exceptions/missing_relationship.js'
 
 /**
  * Resource loader job is to query the Lucid models for the given

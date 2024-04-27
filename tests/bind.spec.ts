@@ -7,11 +7,12 @@
  * file that was distributed with this source code.
  */
 
+import type { HttpContext } from '@adonisjs/core/http'
+import type { Controller } from '../src/types.js'
+
 import { test } from '@japa/runner'
 
 import { bind } from '../src/decorators/bind.js'
-import { HttpContext } from '@adonisjs/core/http'
-import { Controller } from '../src/types/main.js'
 
 test.group('Bind decorator', () => {
   test('collect method parameter types and store on the controller', async ({ assert }) => {

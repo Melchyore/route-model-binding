@@ -1,6 +1,6 @@
 import type { LazyImport } from '@adonisjs/core/types/http'
 import type { Constructor } from '@adonisjs/core/types/container'
-import type { Controller } from './types/main.js'
+import type { Controller } from './types.js'
 
 import is from '@adonisjs/core/helpers/is'
 

@@ -8,13 +8,13 @@
  */
 
 import type { HasMany } from '@adonisjs/lucid/types/relations'
+import type { Param } from '../../src/types.js'
 
 import { test } from '@japa/runner'
 import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
 
 import { setupApp, getContextForRoute, migrate, rollback } from '../../test_helpers/index.js'
 import { ResourceLoader } from '../../src/resource_loader.js'
-import { Param } from '../../src/types/main.js'
 
 test.group('Resource Loader | Scoped', () => {
   test('load nested scoped resource', async ({ assert }) => {
