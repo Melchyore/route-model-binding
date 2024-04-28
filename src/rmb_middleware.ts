@@ -14,6 +14,15 @@ import type { NextFn } from '@adonisjs/core/types/http'
 import { ResourceLoader } from './resource_loader.js'
 import { resolveRouteHandler } from './utils.js'
 
+/**
+ * HttpContext augmentations
+ */
+declare module '@adonisjs/core/http' {
+  export interface HttpContext {
+    resources: Record<string, any>
+  }
+}
+
 export default class RouteModelBindingMiddleware {
   #app: ApplicationService
 

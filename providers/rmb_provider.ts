@@ -15,12 +15,6 @@ import RouteModelBindingMiddleware from '../src/rmb_middleware.js'
  * AdonisJS provider for registering the middleware to the container
  */
 
-declare module '@adonisjs/core/http' {
-  interface HttpContext {
-    resources: Record<string, any>
-  }
-}
-
 export default class RmbProvider {
   constructor(protected app: ApplicationService) {}
 
