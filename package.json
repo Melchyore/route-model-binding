@@ -11,6 +11,7 @@
     "build",
     "!build/bin",
     "!build/tests",
+    "!build/examples",
     "!build/tests_helpers"
   ],
   "exports": {
@@ -21,11 +22,11 @@
   },
   "scripts": {
     "build": "npm run compile",
+    "precompile": "npm run lint && npm run clean",
+    "compile": "tsup-node && tsc --emitDeclarationOnly --declaration",
     "clean": "del-cli build",
-    "compile": "npm run clean && tsc",
     "format": "prettier --write .",
     "lint": "eslint . --ext=.ts",
-    "precompile": "npm run lint",
     "prepublishOnly": "npm run build",
     "pretest": "npm run lint",
     "quick:test": "node --enable-source-maps --loader=ts-node/esm bin/test.ts",
@@ -75,6 +76,7 @@
     "release-it": "^17.1.1",
     "sqlite3": "^5.1.7",
     "ts-node": "^10.9.2",
+    "tsup": "^8.0.2",
     "typescript": "^5.4.3"
   },
   "peerDependencies": {
@@ -95,6 +97,11 @@
       "tagAnnotation": "v${version}",
       "tagName": "v${version}"
     },
+    "hooks": {
+      "before:init": [
+        "npm test"
+      ]
+    },
     "github": {
       "release": true,
       "releaseName": "v${version}",
@@ -109,5 +116,19 @@
     "exclude": [
       "tests/**"
     ]
+  },
+  "tsup": {
+    "entry": [
+      "./index.ts",
+      "./src/types.ts",
+      "./src/rmb_middleware.ts",
+      "./providers/rmb_provider.ts"
+    ],
+    "outDir": "./build",
+    "clean": true,
+    "format": "esm",
+    "dts": false,
+    "sourcemap": true,
+    "target": "esnext"
   }
 }
