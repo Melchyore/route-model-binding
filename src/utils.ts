@@ -1,27 +1,25 @@
 import type { LazyImport } from '@adonisjs/core/types/http'
 import type { Constructor } from '@adonisjs/core/types/container'
-import type { Controller } from './types.js'
 
 import is from '@adonisjs/core/helpers/is'
+import { Controller } from './types.js'
+import { ApplicationService } from '@adonisjs/core/types'
 
 /**
  * Resolve route handler.
- * @see {@link https://github.com/adonisjs/http-server/blob/develop/src/router/route.ts#L136}
  */
 export async function resolveRouteHandler(
-  binding: string | [LazyImport<Constructor<any>> | Constructor<any>, any?]
+  binding: string | [LazyImport<Constructor<any>> | Constructor<any>, any?],
+  app: ApplicationService
 ) {
   if (typeof binding === 'string') {
     const parts = binding.split('.')
     const method = parts.length === 1 ? 'handle' : parts.pop()!
-    const resolvedPath = import.meta.resolve(parts[0], import.meta.url)
-    const moduleExports = await import(resolvedPath)
-
-    console.log(moduleExports.default)
+    const controller = await app.import(parts[0])
 
     return {
+      controllerConstructor: controller.default as Controller,
       method,
-      controllerConstructor: moduleExports.default,
     }
   }
 
@@ -35,8 +33,10 @@ export async function resolveRouteHandler(
       }
     }
 
+    const controller = await (bindingReference as LazyImport<Controller>)()
+
     return {
-      controllerConstructor: (bindingReference as LazyImport<Controller>)(),
+      controllerConstructor: controller.default,
       method: (method as string) || 'handle',
     }
   }

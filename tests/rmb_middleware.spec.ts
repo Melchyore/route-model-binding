@@ -324,7 +324,7 @@ test.group('Route model binding | middleware', () => {
       assert.equal(ctx.resources.post.slug, 'hello-adonisjs')
 
       const postsController = new PostsController() as InstanceType<Controller>
-      const injections = await postsController.getHandlerArguments(ctx)
+      const injections = await postsController.getHandlerArguments(ctx, app)
       assert.deepEqual(injections, [ctx, '1', ctx.resources.post])
     })
 
@@ -391,7 +391,7 @@ test.group('Route model binding | middleware', () => {
       assert.equal(ctx.resources.post.slug, 'hello-adonisjs')
 
       const postsController = new PostsController() as InstanceType<Controller>
-      const injections = await postsController.getHandlerArguments(ctx)
+      const injections = await postsController.getHandlerArguments(ctx, app)
       assert.deepEqual(injections, [ctx, '1', ctx.resources.post])
     })
 
@@ -458,7 +458,7 @@ test.group('Route model binding | middleware', () => {
       assert.equal(ctx.resources.post.slug, 'hello-adonisjs')
 
       const postsController = new PostsController() as InstanceType<Controller>
-      const injections = await postsController.getHandlerArguments(ctx)
+      const injections = await postsController.getHandlerArguments(ctx, app)
       assert.deepEqual(injections, [ctx, ctx.resources.post])
     })
 

@@ -53,12 +53,15 @@ export default class RouteModelBindingMiddleware {
     /**
      * Ensure the bindings for the given controller method are defined
      */
-    const { controllerConstructor, method } = await resolveRouteHandler(handler.reference)
+    const { controllerConstructor, method } = await resolveRouteHandler(
+      handler.reference,
+      this.#app
+    )
 
     if (
       !controllerConstructor ||
-      !('bindings' in controllerConstructor) ||
-      (controllerConstructor['bindings'] && !controllerConstructor['bindings'][method])
+      !controllerConstructor.bindings ||
+      (controllerConstructor.bindings && !controllerConstructor.bindings[method])
     ) {
       return next()
     }

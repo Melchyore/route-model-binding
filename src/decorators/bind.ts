@@ -9,6 +9,7 @@
 
 import type { HttpContext } from '@adonisjs/core/http'
 import { resolveRouteHandler } from '../utils.js'
+import { ApplicationService } from '@adonisjs/core/types'
 
 /**
  * Automatically query Lucid models for the current HTTP
@@ -22,20 +23,20 @@ export function bind() {
     /**
      * Instantiate static bindings property on the controller class
      */
-    const parentBindings = target.constructor.bindings
     if (!target.constructor.hasOwnProperty('bindings')) {
-      Object.defineProperty(target.constructor, 'bindings', {
-        value: parentBindings ? Object.assign({}, parentBindings) : {},
+      defineStaticProperty(target.constructor, 'bindings', {
+        initialValue: {},
+        strategy: 'inherit',
       })
 
       Object.defineProperty(target, 'getHandlerArguments', {
-        value: async function (ctx: HttpContext) {
+        value: async function (ctx: HttpContext, app: ApplicationService) {
           const handler = ctx.route!.handler
           if (!handler || typeof handler === 'function') {
             return [ctx]
           }
 
-          const resolvedHandler = await resolveRouteHandler(handler.reference)
+          const resolvedHandler = await resolveRouteHandler(handler.reference, app)
 
           const bindings = this.constructor.bindings[resolvedHandler.method]
           if (!bindings) {
@@ -56,13 +57,13 @@ export function bind() {
       })
     }
 
-    target.constructor.bindings[propertyKey] = target.constructor.bindings[propertyKey] || []
+    target.constructor.bindings[method] = target.constructor.bindings[method] || []
     methodParams.forEach((param: any, index: number) => {
       /**
        * The first method param is always the HTTP context
        */
       if (index !== 0) {
-        target.constructor.bindings[propertyKey].push(param)
+        target.constructor.bindings[method].push(param)
       }
     })
   }
