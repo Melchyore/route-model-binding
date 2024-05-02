@@ -15,6 +15,18 @@ import { test } from '@japa/runner'
 import { bind } from '../src/decorators/bind.js'
 
 test.group('Bind decorator', () => {
+  test('controller constructor should have containerProvider static property', async ({
+    assert,
+  }) => {
+    class User {}
+
+    class UsersController {
+      @bind()
+      async show(_: HttpContext, __: User) {}
+    }
+
+    assert.property(UsersController, 'containerProvider')
+  })
   test('collect method parameter types and store on the controller', async ({ assert }) => {
     class User {}
 

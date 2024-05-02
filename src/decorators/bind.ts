@@ -8,6 +8,10 @@
  */
 
 import type { HttpContext } from '@adonisjs/core/http'
+import type { ContainerProvider } from '@adonisjs/fold/types'
+
+import { defineStaticProperty } from '@poppinss/utils'
+
 import { resolveRouteHandler } from '../utils.js'
 import { ApplicationService } from '@adonisjs/core/types'
 
@@ -17,8 +21,33 @@ import { ApplicationService } from '@adonisjs/core/types'
  * with controllers
  */
 export function bind() {
-  return function (target: any, propertyKey: string) {
-    const methodParams = Reflect.getMetadata('design:paramtypes', target, propertyKey)
+  return function (target: any, method: string) {
+    const methodParams = Reflect.getMetadata('design:paramtypes', target, method)
+    if (!target.constructor.hasOwnProperty('containerProvider')) {
+      const containerProvider: ContainerProvider = (
+        binding,
+        property,
+        resolver,
+        defaultProvider,
+        runtimeValues
+      ) => {
+        if (runtimeValues) {
+          /**
+           * Add model instances to the runtime values from HTTP context resources
+           */
+          for (const modelInstance of Object.values(runtimeValues[0].resources)) {
+            runtimeValues.push(modelInstance)
+          }
+        }
+
+        return defaultProvider(binding, property, resolver, runtimeValues)
+      }
+
+      defineStaticProperty(target.constructor, 'containerProvider', {
+        initialValue: containerProvider,
+        strategy: 'inherit',
+      })
+    }
 
     /**
      * Instantiate static bindings property on the controller class
